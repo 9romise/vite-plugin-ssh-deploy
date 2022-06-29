@@ -1,7 +1,7 @@
 {
   "name": "vite-plugin-ssh-deploy",
   "type": "module",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A plugin for uploading the local build directory to the host server",
   "author": "vida",
   "license": "MIT",
