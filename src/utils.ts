@@ -4,18 +4,18 @@ import path from 'path'
 import chalk from 'chalk'
 import { Client } from 'ssh2'
 
-export async function createZip(path: string, zipName: string): Promise<string[]> {
+export async function createZip(path: string, zipName: string): Promise<void> {
   return new Promise((resolve) => {
     const output = fs.createWriteStream(zipName)
     const archive = archiver('zip', {
       zlib: { level: 9 },
     })
     output.on('close', () => {
-      console.log(`✔ ${zipName} created`)
-      resolve(fs.readdirSync(path))
+      console.log(chalk.green(`✔ ${zipName} created\n`))
+      resolve()
     })
     archive.on('error', (err) => {
-      console.log(chalk.red('❌createZip Error: ', err))
+      console.log(chalk.red('❌ createZip Error: ', err))
     })
     archive.pipe(output)
     archive.directory(path, false)
@@ -33,7 +33,7 @@ export async function backupRemotePath(
       if (err) throw err
       stream
         .on('close', async () => {
-          await downloadBackup()
+          await downloadZip()
           resolve()
         })
         .on('data', (data: string) => {})
@@ -42,7 +42,7 @@ export async function backupRemotePath(
         })
     })
   })
-  async function downloadBackup(): Promise<void> {
+  async function downloadZip(): Promise<void> {
     return new Promise((resolve) => {
       conn.sftp((err, sftp) => {
         if (err) throw err
@@ -51,7 +51,11 @@ export async function backupRemotePath(
           path.join(root, zipName),
           (err2) => {
             if (err2) throw err2
-            console.log(`✔ backup completed: ${zipName} in the root directory`)
+            console.log(
+              chalk.green(
+                `✔ backup completed: ${zipName} in the root directory\n`
+              )
+            )
             resolve()
           }
         )
@@ -59,22 +63,22 @@ export async function backupRemotePath(
     })
   }
 }
-export async function deleteRemotePath(
+export async function deleteFileOnServer(
   conn: Client,
   remotePath: string,
-  fileName: string
+  fileName: string | string[]
 ): Promise<void> {
-  if (!fileName) throw new Error('❌please provide a file name!')
   return new Promise((resolve) => {
-    conn.exec(`cd ${remotePath} && rm -rf ${fileName}`, (err, stream) => {
+    const files = typeof fileName === 'string' ? fileName : fileName.join(' ')
+    conn.exec(`cd ${remotePath} && rm -rf -v ${files}`, (err, stream) => {
       if (err) throw err
       stream
         .on('close', async () => {
-          console.log(`delete completed: ${remotePath}${fileName}`)
+          console.log(chalk.green(`✔ delete completed\n`))
           resolve()
         })
-        .on('data', (data: string) => {
-          console.log('deleteRemotePath OUT: ' + data)
+        .on('data', (data: any) => {
+          console.log(data.toString())
         })
         .stderr.on('data', (data) => {
           console.log('deleteRemotePath ERR: ' + data)
@@ -82,21 +86,18 @@ export async function deleteRemotePath(
     })
   })
 }
-export async function uploadZip(
+export async function uploadFile(
   conn: Client,
-  root: string,
-  remotePath: string,
-  zipName: string
+  localPath: string,
+  remotePath: string
 ): Promise<void> {
   return new Promise((resolve) => {
     conn.sftp((err, sftp) => {
       if (err) throw err
-      console.log(
-        `upload start: ${path.join(root, zipName)} => ${remotePath + zipName}`
-      )
-      sftp.fastPut(path.join(root, zipName), remotePath + zipName, (err2) => {
+      console.log(`upload start: ${localPath} => ${remotePath}`)
+      sftp.fastPut(localPath, remotePath, (err2) => {
         if (err2) throw err2
-        console.log('✔ upload completed')
+        console.log(chalk.green('✔ upload completed\n'))
         resolve()
       })
     })
@@ -113,22 +114,13 @@ export async function unzipOnServer(
       if (err) throw err
       stream
         .on('close', () => {
-          console.log('✔ unzip completed')
+          console.log(chalk.green('✔ unzip completed\n'))
           resolve()
         })
-        .on('data', (data:any) => {})
+        .on('data', (data: any) => {})
         .stderr.on('data', (data) => {
           console.log('unzipOnServer ERR: ' + data)
         })
     })
-  })
-}
-export async function deleteOnLocal(
-  root: string,
-  zipName: string
-): Promise<void> {
-  return new Promise((resolve) => {
-    fs.unlinkSync(path.join(root, zipName))
-    resolve()
   })
 }

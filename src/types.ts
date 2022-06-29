@@ -4,6 +4,12 @@ export interface PluginConfig {
    * @default true
    */
   enable?: boolean
+  // /**
+  //  * the mode to upload files
+  //  * zip mode need install 'unzip' on remote server
+  //  * @default zip
+  //  */
+  // mode?: 'zip' | 'file'
   host: string
   /**
    * @default 22
@@ -24,4 +30,10 @@ export interface PluginConfig {
    * url to preview after deploy
    */
   previewPath?: string
+  /**
+   * remove local zip after deploy
+   * only use in zip mode
+   * @default true
+   */
+  deleteLocalZip?: boolean
 }

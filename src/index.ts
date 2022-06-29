@@ -1,19 +1,20 @@
-import chalk from 'chalk'
+import fs from 'fs'
 import path from 'path'
+import chalk from 'chalk'
 import { Client } from 'ssh2'
 import type { PluginConfig } from './types'
 import type { ResolvedConfig } from 'vite'
 import {
   createZip,
   backupRemotePath,
-  deleteRemotePath,
-  uploadZip,
+  deleteFileOnServer,
+  uploadFile,
   unzipOnServer,
-  deleteOnLocal,
 } from './utils'
 
 export default function SSHDeploy({
   enable = true,
+  // mode = 'zip',
   host,
   port = 22,
   username,
@@ -21,6 +22,7 @@ export default function SSHDeploy({
   remotePath,
   previewPath,
   backup = false,
+  deleteLocalZip = true,
 }: PluginConfig) {
   let config: ResolvedConfig
   return {
@@ -32,44 +34,56 @@ export default function SSHDeploy({
     },
     async closeBundle() {
       if (enable) {
-        console.log(chalk.blue('🚀deploy start'))
+        console.log(chalk.blue('\n🚀 deploy start'))
         const { root, build } = config
         const buildOutDir = path.join(root, build.outDir)
         const startTime = Date.now()
         const zipName = 'dist.zip'
-        const filesInDist =await createZip(buildOutDir, zipName)
+        const filesInDist = fs.readdirSync(buildOutDir)
+        // if (mode === 'zip')
+        await createZip(buildOutDir, zipName)
         const conn = new Client()
         conn
           .on('ready', async () => {
+            console.log('FTP open...')
             try {
-              console.log(chalk.green(`🔗connect to ${host} success!`))
+              console.log(chalk.green(`🔗 connect to ${host} success!`))
               if (backup) {
                 const backupStartTime = Date.now()
                 await backupRemotePath(conn, root, remotePath)
                 const backupEndTime = Date.now()
                 console.log(
-                  chalk.green(
+                  chalk.greenBright(
                     `⭐backup over, lost：${backupEndTime - backupStartTime}ms`
                   )
                 )
               }
-              await deleteRemotePath(conn, remotePath, `(${filesInDist.join(' ')})`)
-              await uploadZip(conn, root, remotePath, zipName)
+              await deleteFileOnServer(conn, remotePath, filesInDist)
+              // if (mode === 'zip') {
+              await uploadFile(
+                conn,
+                path.join(root, zipName),
+                remotePath + zipName
+              )
               await unzipOnServer(conn, remotePath, zipName)
-              await deleteRemotePath(conn, remotePath, zipName)
+              await deleteFileOnServer(conn, remotePath, zipName)
+              // } else if (mode === 'file') {
+              // await uploadFiles()
+              // }
             } catch (err) {
               console.log(chalk.red(err))
             }
             conn.destroy()
             const endTime = Date.now()
             console.log(
-              chalk.green(`⭐deploy over, all time：${endTime - startTime}ms`)
+              chalk.blue(`🚀 deploy over, all time：${endTime - startTime}ms`)
             )
-            console.log(chalk.blue(`preview url: ${previewPath}`))
-            deleteOnLocal(root, zipName)
+            console.log('✨ preview url: ' + chalk.blue(`${previewPath}`))
+            // if (mode === 'zip' && deleteLocalZip)
+            if (deleteLocalZip) fs.unlinkSync(path.join(root, zipName))
           })
           .on('error', (err) => {
-            console.error('❌FTP error: ', err.description)
+            console.error('❌ FTP error: ', err.description)
           })
           .on('end', () => {
             console.error('FTP end...')
