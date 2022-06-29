@@ -37,7 +37,7 @@ export default function SSHDeploy({
         const buildOutDir = path.join(root, build.outDir)
         const startTime = Date.now()
         const zipName = 'dist.zip'
-        await createZip(buildOutDir, zipName)
+        const filesInDist =await createZip(buildOutDir, zipName)
         const conn = new Client()
         conn
           .on('ready', async () => {
@@ -53,7 +53,7 @@ export default function SSHDeploy({
                   )
                 )
               }
-              await deleteRemotePath(conn, remotePath, '*')
+              await deleteRemotePath(conn, remotePath, `(${filesInDist.join(' ')})`)
               await uploadZip(conn, root, remotePath, zipName)
               await unzipOnServer(conn, remotePath, zipName)
               await deleteRemotePath(conn, remotePath, zipName)

@@ -4,15 +4,15 @@ import path from 'path'
 import chalk from 'chalk'
 import { Client } from 'ssh2'
 
-export async function createZip(path: string, zipName: string): Promise<void> {
+export async function createZip(path: string, zipName: string): Promise<string[]> {
   return new Promise((resolve) => {
     const output = fs.createWriteStream(zipName)
     const archive = archiver('zip', {
       zlib: { level: 9 },
     })
     output.on('close', () => {
-      console.log(`✅${zipName} created`)
-      resolve()
+      console.log(`✔ ${zipName} created`)
+      resolve(fs.readdirSync(path))
     })
     archive.on('error', (err) => {
       console.log(chalk.red('❌createZip Error: ', err))
@@ -51,7 +51,7 @@ export async function backupRemotePath(
           path.join(root, zipName),
           (err2) => {
             if (err2) throw err2
-            console.log(`✅backup completed: ${zipName} in the root directory`)
+            console.log(`✔ backup completed: ${zipName} in the root directory`)
             resolve()
           }
         )
@@ -66,7 +66,7 @@ export async function deleteRemotePath(
 ): Promise<void> {
   if (!fileName) throw new Error('❌please provide a file name!')
   return new Promise((resolve) => {
-    conn.exec(`cd ${remotePath} && rm -r ${fileName}`, (err, stream) => {
+    conn.exec(`cd ${remotePath} && rm -rf ${fileName}`, (err, stream) => {
       if (err) throw err
       stream
         .on('close', async () => {
@@ -96,7 +96,7 @@ export async function uploadZip(
       )
       sftp.fastPut(path.join(root, zipName), remotePath + zipName, (err2) => {
         if (err2) throw err2
-        console.log('✅upload completed')
+        console.log('✔ upload completed')
         resolve()
       })
     })
@@ -113,7 +113,7 @@ export async function unzipOnServer(
       if (err) throw err
       stream
         .on('close', () => {
-          console.log('✅unzip completed')
+          console.log('✔ unzip completed')
           resolve()
         })
         .on('data', (data:any) => {})
