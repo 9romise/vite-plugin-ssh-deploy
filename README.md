@@ -11,14 +11,14 @@
 
 ## Features
 
-- Upload the local build directory to the host server
+- Upload the local build outdir to the host server
 - Backup from the host server
 
 ## Notice
 
-**You need to install unzip on the host server**
+**If you use zip mode, you need to install unzip on the host server**
 
-**if you want to backup, zip is also necessary**
+**if you want to backup, you need to install zip on the host server**
 
 ## Install
 
@@ -38,6 +38,7 @@ export default {
   plugins: [
     SSHDeploy({
         host: '***.***.***.***',
+        port: 22,
         username: '****',
         password: '******',
         remotePath: '/usr/local/www/',
