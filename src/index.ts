@@ -1,20 +1,16 @@
 import fs from 'fs'
 import path from 'path'
 import chalk from 'chalk'
-import { Client } from 'ssh2'
 import type { PluginConfig } from './types'
 import type { ResolvedConfig } from 'vite'
-import {
-  createZip,
-  backupRemotePath,
-  deleteFileOnServer,
-  uploadFile,
-  unzipOnServer,
-} from './utils'
+import LocalClient from './local'
+import RemoteClient from './remote'
+
+const { log } = console
 
 export default function SSHDeploy({
   enable = true,
-  // mode = 'zip',
+  mode = 'zip',
   host,
   port = 22,
   username,
@@ -22,7 +18,7 @@ export default function SSHDeploy({
   remotePath,
   previewPath,
   backup = false,
-  deleteLocalZip = true,
+  removeLocalZip = true,
 }: PluginConfig) {
   let config: ResolvedConfig
   return {
@@ -34,69 +30,43 @@ export default function SSHDeploy({
     },
     async closeBundle() {
       if (enable) {
-        console.log(chalk.blue('\n🚀 deploy start'))
+        log(chalk.blue('\n🚀 deploy start'))
+
         const { root, build } = config
-        const buildOutDir = path.join(root, build.outDir)
+        const { outDir } = build
         const startTime = Date.now()
         const zipName = 'dist.zip'
-        const filesInDist = fs.readdirSync(buildOutDir)
-        // if (mode === 'zip')
-        await createZip(buildOutDir, zipName)
-        const conn = new Client()
-        conn
-          .on('ready', async () => {
-            console.log('FTP open...')
-            try {
-              console.log(chalk.green(`🔗 connect to ${host} success!`))
-              if (backup) {
-                const backupStartTime = Date.now()
-                await backupRemotePath(conn, root, remotePath)
-                const backupEndTime = Date.now()
-                console.log(
-                  chalk.greenBright(
-                    `⭐backup over, lost：${backupEndTime - backupStartTime}ms`
-                  )
-                )
-              }
-              await deleteFileOnServer(conn, remotePath, filesInDist)
-              // if (mode === 'zip') {
-              await uploadFile(
-                conn,
-                path.join(root, zipName),
-                remotePath + zipName
-              )
-              await unzipOnServer(conn, remotePath, zipName)
-              await deleteFileOnServer(conn, remotePath, zipName)
-              // } else if (mode === 'file') {
-              // await uploadFiles()
-              // }
-            } catch (err) {
-              console.log(chalk.red(err))
-            }
-            conn.destroy()
-            const endTime = Date.now()
-            console.log(
-              chalk.blue(`🚀 deploy over, all time：${endTime - startTime}ms`)
-            )
-            console.log('✨ preview url: ' + chalk.blue(`${previewPath}`))
-            // if (mode === 'zip' && deleteLocalZip)
-            if (deleteLocalZip) fs.unlinkSync(path.join(root, zipName))
-          })
-          .on('error', (err) => {
-            console.error('❌ FTP error: ', err.description)
-          })
-          .on('end', () => {
-            console.error('FTP end...')
-          })
-          .on('close', () => {
-            console.error('FTP close...')
-          })
-          .connect({
-            host,
-            port,
-            username,
-            password,
-          })
+        const localClient = new LocalClient(root)
+        const remoteClient = new RemoteClient(root, remotePath)
+
+        if (mode === 'zip') await localClient.createZip(outDir, zipName)
+        try {
+          await remoteClient.connect({ host, port, username, password })
+          // backup
+          if (backup) await remoteClient.backup()
+          // remote files on server
+          const filesInDist = localClient.readDir(outDir)
+          await remoteClient.remove(filesInDist.join(' '))
+          // upload
+          if (mode === 'zip') {
+            await remoteClient.uploadFile(zipName)
+          } else if (mode === 'file') {
+            await remoteClient.uploadDir(build.outDir)
+          }
+          if (mode === 'zip') {
+            // unzip
+            await remoteClient.unzip(zipName)
+            await remoteClient.remove(zipName)
+          }
+          const endTime = Date.now()
+          log(chalk.blue(`🚀 deploy over, all time：${endTime - startTime}ms`))
+          log('✨ preview url: ' + chalk.yellow(`${previewPath}`))
+          if (mode === 'zip' && removeLocalZip) localClient.removeFile(zipName)
+        } catch (err) {
+          log(chalk.red(err))
+        } finally {
+          remoteClient.destroy()
+        }
       }
     },
   }
