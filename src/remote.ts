@@ -1,7 +1,7 @@
 import { Client, SFTPWrapper } from 'ssh2'
 import chalk from 'chalk'
 import fs from 'fs'
-import { fmtPath } from './utils'
+import { fmtLocalPath, fmtRemotePath } from './utils'
 import { ClientConfig } from './types'
 
 const { log } = console
@@ -88,8 +88,8 @@ export default class RemoteClient {
   private async _downloadFile(fileName: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.sftp?.fastGet(
-        fmtPath(this.remoteRoot, fileName),
-        fmtPath(this.localRoot, fileName),
+        fmtRemotePath(this.remoteRoot, fileName),
+        fmtLocalPath(this.localRoot, fileName),
         (err2) => {
           if (err2) reject(err2)
           resolve()
@@ -122,8 +122,8 @@ export default class RemoteClient {
   }
 
   async uploadDir(localPath = '', remotePath = ''): Promise<void> {
-    const upLocalPath = fmtPath(this.localRoot, localPath)
-    const upRemotePath = fmtPath(this.remoteRoot, remotePath)
+    const upLocalPath = fmtLocalPath(this.localRoot, localPath)
+    const upRemotePath = fmtRemotePath(this.remoteRoot, remotePath)
     log(`upload start: ${upLocalPath} => ${upRemotePath}`)
     return new Promise((resolve, reject) => {
       if (fs.existsSync(upLocalPath)) {
@@ -150,8 +150,8 @@ export default class RemoteClient {
       const files = fs.readdirSync(localPath)
       Promise.all(
         files.map(async (file) => {
-          const fileLocalPath = fmtPath(localPath, file)
-          const fileRemotePath = fmtPath(remotePath, file)
+          const fileLocalPath = fmtLocalPath(localPath, file)
+          const fileRemotePath = fmtRemotePath(remotePath, file)
           const fileStat = fs.statSync(fileLocalPath)
           if (fileStat.isDirectory()) {
             const dirExist = await this._exists(fileRemotePath)
@@ -170,8 +170,8 @@ export default class RemoteClient {
   }
 
   async uploadFile(fileName: string): Promise<void> {
-    const upLocalPath = fmtPath(this.localRoot, fileName)
-    const upRemotePath = this.remoteRoot + fileName
+    const upLocalPath = fmtLocalPath(this.localRoot, fileName)
+    const upRemotePath = fmtRemotePath(this.remoteRoot, fileName)
     log(`upload start: ${upLocalPath} => ${upRemotePath}`)
     return new Promise((resolve, reject) => {
       if (fs.existsSync(upLocalPath)) {

@@ -10,7 +10,7 @@ const { log } = console
 
 export default function SSHDeploy({
   enable = true,
-  mode = 'zip',
+  mode = 'file',
   host,
   port = 22,
   username,
@@ -51,7 +51,7 @@ export default function SSHDeploy({
           if (mode === 'zip') {
             await remoteClient.uploadFile(zipName)
           } else if (mode === 'file') {
-            await remoteClient.uploadDir(build.outDir)
+            await remoteClient.uploadDir(outDir)
           }
           if (mode === 'zip') {
             // unzip
@@ -60,7 +60,8 @@ export default function SSHDeploy({
           }
           const endTime = Date.now()
           log(chalk.blue(`🚀 deploy over, all time：${endTime - startTime}ms`))
-          log('✨ preview url: ' + chalk.yellow(`${previewPath}`))
+          if (previewPath)
+            log('✨ preview url: ' + chalk.yellow(`${previewPath}`))
           if (mode === 'zip' && removeLocalZip) localClient.removeFile(zipName)
         } catch (err) {
           log(chalk.red(err))

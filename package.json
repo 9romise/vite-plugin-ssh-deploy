@@ -17,6 +17,10 @@
     "vite",
     "plugin",
     "ssh",
+    "ssh2",
+    "sftp",
+    "remote",
+    "upload",
     "deploy"
   ],
   "exports": {

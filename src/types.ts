@@ -7,9 +7,9 @@ export type PluginConfig = ClientConfig & {
   /**
    * the mode to upload files
    * zip mode need install 'unzip' on remote server
-   * @default zip
+   * @default file
    */
-  mode?: 'zip' | 'file'
+  mode?: 'file' | 'zip'
   /**
    * remote dir
    */
