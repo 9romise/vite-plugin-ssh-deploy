@@ -1,10 +1,5 @@
 export type PluginConfig = ClientConfig & {
   /**
-   * enable the plugin
-   * @default true
-   */
-  enable?: boolean
-  /**
    * the mode to upload files
    * zip mode need install 'unzip' on remote server
    * @default file
