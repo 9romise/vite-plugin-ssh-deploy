@@ -1,5 +1,3 @@
-
-
 <h1 align="center">vite-plugin-ssh-deploy</h1>
 
 <p align="center">A plugin for uploading the local build directory to the host server.</p>
@@ -8,6 +6,14 @@
 	<img src="https://img.shields.io/npm/v/vite-plugin-ssh-deploy" alt="NPM version" />
   </a>
 </p>
+
+> [!IMPORTANT]
+> This is a plugin I implemented early in my learning journey, and it is not a good solution to the deployment issue.
+> 
+> This plugin only uses the `closeBundle` hook so it can be a standalone script that runs independently at any time.
+> 
+> If you need any assistance, feel free to contact me.
+
 
 ## Features
 
